@@ -1,30 +1,9 @@
 import streamlit as st
 import pandas as pd
 from snowflake.snowpark.session import Session
-from utils import list_concat
-from geo_utils import add_h3_index
 from CONSTANTS import TABLE_INDEX
+from utils import list_concat
 
-
-STATIC_TABLES = {
-    "description": "2020_METADATA_CBG_FIELD_DESCRIPTIONS",
-    "geographic": "2020_METADATA_CBG_GEOGRAPHIC_DATA"
-}
-
-STATIC_COLUMNS = {
-    "2020_METADATA_CBG_FIELD_DESCRIPTIONS" : [
-        "TABLE_ID",
-        "TABLE_NUMBER",
-        "TABLE_TITLE",
-        "FIELD_LEVEL_5",
-        "FIELD_LEVEL_6"
-    ],
-    "2020_METADATA_CBG_GEOGRAPHIC_DATA": [
-        TABLE_INDEX,
-        "LATITUDE",
-        "LONGITUDE"
-    ]
-}
 
 FIELD_PREFIXES = [
     "B01001",
@@ -37,16 +16,44 @@ FIELD_PREFIXES = [
     "B25075"
 ]
 
-TABLES_2020 = [
-    "2020_CBG_" + name[:3] for name in FIELD_PREFIXES
-]
-
-TABLES_2019 = [
-    "2019_CBG_" + name[:3] for name in FIELD_PREFIXES
-]
+# pattern for static tables
+STATIC_TABLES = {
+    "description": "{year}_METADATA_CBG_FIELD_DESCRIPTIONS",
+    "geographic": "{year}_METADATA_CBG_GEOGRAPHIC_DATA",
+    "states": "{year}_CBG_GEOMETRY_WKT"
+}
+# static columns
+STATIC_COLUMNS = {
+    "description" : [
+        "TABLE_ID",
+        "TABLE_NUMBER",
+        "TABLE_TITLE",
+        "FIELD_LEVEL_5",
+        "FIELD_LEVEL_6"
+    ],
+    "geographic": [
+        TABLE_INDEX,
+        "LATITUDE",
+        "LONGITUDE"
+    ],
+    "states": [
+        TABLE_INDEX,
+    ]
+}
+# static where
+STATIC_WHERE = {
+    "description": f'''FIELD_LEVEL_1 = 'Estimate' 
+        and LOWER(TABLE_TITLE) not like '%median%'
+        and TABLE_NUMBER in ({list_concat(FIELD_PREFIXES)})
+        and FIELD_LEVEL_5 is not null
+        ''',
+    "geographic": None,
+    "states": "STATE in (states_list)"
+}
 
 
 def init_connection():
+    """Connector to snowflake."""
     sec = False
     if sec: # st.secrets:
         session = Session.builder.configs(**st.secrets["snowflake"]).create()
@@ -77,6 +84,7 @@ def init_connection():
 
 # @st.experimental_memo(ttl=1200)
 def read_table(table : str, columns : list = None, where: str = None):
+    """Read data from "select-from[-where]" querry."""
     session = init_connection()
     if columns is not None:
         cols = ", ".join(columns)
@@ -91,48 +99,33 @@ def read_table(table : str, columns : list = None, where: str = None):
     return df
 
 
-def field_description(split : str = None, field_level_5 : list = None, field_level_6 : list = None):
-    table = STATIC_TABLES["description"]
-    columns = STATIC_COLUMNS[table]
-    split_list = list_concat(FIELD_PREFIXES)
-    where = f"""
-        FIELD_LEVEL_1 = 'Estimate' 
-        and LOWER(TABLE_TITLE) not like '%median%'
-        and TABLE_NUMBER in ({split_list})
-        and FIELD_LEVEL_5 is not null
-    """
-    if split is not None:
-         where += f" and TABLE_TITLE = '{split}'"
-    if field_level_5 is not None:
-        field_lvl_5_con = list_concat(field_level_5)
-        where += f" and FIELD_LEVEL_5 in ({field_lvl_5_con})"
-    if field_level_6 is not None:
-        field_lvl_6_con = list_concat(field_level_6)
-        where += f" and FIELD_LEVEL_6 in ({field_lvl_6_con})"
-    fd = read_table(table, columns, where)
-    return fd
-     
-def cbg_coordinates(add_h3, h3_res=6):
-    table = STATIC_TABLES["geographic"]
-    cols = STATIC_COLUMNS[table]
-    df_coord = read_table(table, cols)
-    if add_h3:
-        df_coord_h3 = add_h3_index(df_coord, h3_res)
-        return df_coord_h3
+def read_static(year, name, use_where : bool = True, **kwards):
+    """Read static table"""
+    table = STATIC_TABLES[name].format(year=year)
+    columns = STATIC_COLUMNS[name]
+    if use_where:
+        where = STATIC_WHERE[name]
+        for k, v in kwards.items():
+            where = where.replace(k, v)
     else:
-        return df_coord
+        where = None
+    df_static = read_table(table, columns, where)
+    return df_static
 
-def read_dataset(table : str, columns : list = None, where: str = None):
+
+def read_dataset(table : str, columns : list = None):
+    """Read tables with actual data."""
     session = init_connection()
     if columns is not None:
+        # columns must be in double quotes here
         cols = ['"' + col + '"' for col in columns]
         cols = ", ".join(cols)
         query = f'''select {TABLE_INDEX}, {cols} from "{table}"'''
     else:
         query = f'''select * from "{table}"'''
-    if where is not None:
-            query += f" where {where}"
     df = pd.DataFrame(
         session.sql(query=query).collect(),
     )
     return df
+
+
