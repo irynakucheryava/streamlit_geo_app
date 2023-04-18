@@ -1,19 +1,26 @@
 import h3pandas
-import pandas as pd
+
 import numpy as np
-from CONSTANTS import TABLE_INDEX
-
-from geojson import Feature, FeatureCollection
-
+import pandas as pd
 import plotly.express as px
+
+from CONSTANTS import TABLE_INDEX
+from geojson import Feature, FeatureCollection
 
 
 def add_geography(raw_data, raw_geography):
+    """
+    Siple merge of actual data and geographic data.
+    """
     raw_data_coord = pd.merge(raw_data, raw_geography, on=TABLE_INDEX)
     raw_data_coord.index = raw_geography["h3_index"]
     return raw_data_coord
 
+
 def add_h3_index(raw_data : pd.DataFrame, resolution : int):
+    """
+    Adding H3 Uber index based on latitude and longitude.
+    """
     raw_data_h3 = raw_data.h3.geo_to_h3(
         resolution=resolution,
         lat_col="LATITUDE", lng_col="LONGITUDE",
@@ -25,14 +32,21 @@ def add_h3_index(raw_data : pd.DataFrame, resolution : int):
 
 
 def h3_resolution_change(raw_coord_h3 : pd.DataFrame, new_resolution : int):
+    """
+    Resizing of H3 hexagons.
+    """
+    # get old resolution
     old_resolution = raw_coord_h3.h3.h3_get_resolution().h3_resolution.unique()[0]
     if old_resolution > new_resolution:
+        # if new resolution is parent to old
         raw_data_h3_new = raw_coord_h3.h3.h3_to_parent_aggregate(new_resolution)
         raw_data_h3_new["h3_index"] = raw_data_h3_new.index
         return raw_data_h3_new
     elif old_resolution == new_resolution:
+        # nothing to do
         return raw_coord_h3
     else:
+        # drop old and create new
         raw_coord_h3.reset_index(inplace=True)
         raw_data_h3_new = add_h3_index(raw_coord_h3, new_resolution)
         return raw_data_h3_new
@@ -41,6 +55,9 @@ def h3_resolution_change(raw_coord_h3 : pd.DataFrame, new_resolution : int):
 def hexagons_dataframe_to_geojson(
     df_hex, hex_id_field, geometry_field, value_field
     ):
+    """
+    Create geojson coordintes out of H3 index for plotly.
+    """
     list_features = []
     for _, row in df_hex.iterrows():
         feature = Feature(geometry = row[geometry_field],
@@ -51,7 +68,10 @@ def hexagons_dataframe_to_geojson(
     return feat_collection
 
 
-def plotly_h3(df):
+def plotly_h3(df : pd.DataFrame):
+    """
+    Plotly map based on H3 index.
+    """
     geojson_obj = hexagons_dataframe_to_geojson(
         df,
         hex_id_field="h3_index",
@@ -71,7 +91,7 @@ def plotly_h3(df):
         #mapbox_style="carto-positron",
         mapbox_style="open-street-map",
         zoom=3.5,
-        center = {"lat": 37.0902, "lon": -95.7129},
+        center = {"lat": df["LATITUDE"].mean(), "lon": df["LONGITUDE"].mean()},
         opacity=0.9,
         #labels={"count":"# of fire ignitions"}
     )
@@ -84,6 +104,7 @@ def plotly_h3(df):
 
     return fig
 
+
 def plotly_hist_all(df, h3_level):
     fig = px.histogram(df,
                        x="value_count",
@@ -93,6 +114,7 @@ def plotly_hist_all(df, h3_level):
                            },
                        title="Distribution of all hexagons count at H" + h3_level + ' level')
     return fig
+
 
 def plotly_hist_out(df, h3_level):
     # removing all zeros and
