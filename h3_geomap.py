@@ -4,10 +4,10 @@ import geo_utils
 import pandas as pd
 import numpy as np
 
-YEAR = [
-    2019,
-    2020
-]
+
+from utils import list_concat
+from CONSTANTS import YEAR, STATES, TABLE_DATA, TABLE_INDEX
+
 
 SPLITS = [
     'Sex By Age',
@@ -19,10 +19,7 @@ SPLITS = [
     'Value'
 ]
 
-H3_RESOLUTION = 7
-
-coord_h3 = querry.cbg_coordinates(add_h3=True, h3_res=H3_RESOLUTION)
-
+H3_RESOLUTION = 6
 
 
 def h3_geomap_UI():
@@ -35,168 +32,153 @@ def h3_geomap_UI():
             Please note that Filter 2 will be shown only if available.""")
 
     st.markdown('#')
-
+    # select year
     year = st.selectbox(
-        'Select year',
+        "What year do you want to explore?",
         YEAR ,
         1,
     )
+    # get coordinates
+    cbg_coord = querry.read_static(year, name="geographic", use_where=False)
+    # field description
+    fd = querry.read_static(year, "description")
     st.markdown('#')
-    # choose split
-    split = st.selectbox(
-        'Select a feature you would like to explore',
-        SPLITS,
-        0
+    # select state
+    states = st.multiselect(
+        label="Choose state or ALL",
+        options=['All'] + list(STATES.keys()),
+        default=None,
     )
-    # description map
-    fd = querry.field_description(split)
-    # lvl 5 filter
-    f1 = list(filter(None, fd.FIELD_LEVEL_5.unique()))
-
-    st.markdown('#')
-    filter_1 = st.multiselect(
-        label="Choose filter 1",
-        options=fd.FIELD_LEVEL_5.unique(),
-        default=f1[0],
-    )
-    # filtered by lvl 5
-    fd = querry.field_description(split, filter_1)
-    # lvl 6 filter
-    f2 = list(filter(None, fd.FIELD_LEVEL_6.unique()))
-    st.markdown('#')
-    if len(f2) > 0:
-        filter_2 = st.multiselect(
-            "Choose filter 2",
-            f2,
-            default=f2,
+    # select cbg from selected states
+    if len(states) > 0:
+        if 'All' in states:
+            cbg_states = querry.read_static(year, name="states", use_where=False)
+        else:
+            states_codes = [code for _, code in STATES.items() if _ in states]
+            states_list = list_concat(states_codes)
+            cbg_states = querry.read_static(year, name="states", use_where=True, states_list=states_list)
+        # choose split
+        st.markdown('#')
+        split = st.selectbox(
+            "Chooose split to show",
+            SPLITS,
+            0
         )
-    else:
-        filter_2 = None
-    st.markdown('#')
-    h3_res = st.selectbox(
-        "Choose the resolution of H3",
-        [4, 5, 6],
-    )
-    fd_filtered = querry.field_description(split, filter_1, filter_2)
-    # table name and columns for actual data
-    table = "2020_CBG_" + fd_filtered.TABLE_NUMBER.str[:3].unique()[0]
-    cols = list(fd_filtered.TABLE_ID.unique())
-    df = querry.read_dataset(table, cols)
-    #df["value_count"] = df.sum(axis=1)
-    #df['log_value_count'] = np.log2(df["value_count"])
-    # check selected resolution
-    df_h3_geom = geo_utils.add_geography(df, coord_h3)
-    df_h3_geom = geo_utils.h3_resolution_change(df_h3_geom, h3_res)
-    df_h3_geom['value_count'] = df_h3_geom[cols].sum(axis=1)
-    df_h3_geom['log2_value_count'] = np.log2(df_h3_geom['value_count'])
-    df_h3_geom.loc[np.isinf(df_h3_geom['log2_value_count']), 'log2_value_count'] = 0 # replacing inf with 0 (still 0 peopl in hexagon)
+        # select description for chosen split
+        fd_split = fd.loc[fd.TABLE_TITLE == split]
+        # lvl 5 filter
+        filter_lvl5 = list(
+            filter(
+                None,
+                fd_split.FIELD_LEVEL_5.unique()
+            )
+        )
+        st.markdown('#')
+        filter_1 = st.multiselect(
+            label="Choose filter 1",
+            options=['All'] + filter_lvl5,
+            default=None,
+        )
+        if len(filter_1) > 0:
+            # filtered by lvl 6
+            if 'All' in filter_1:
+                filter_1 = filter_lvl5
+            filter_lvl6 = list(
+                filter(
+                    None,
+                    fd_split.loc[
+                        fd_split.FIELD_LEVEL_5.isin(filter_1),
+                        "FIELD_LEVEL_6"
+                    ].unique()
+                )
+            )
+            if len(filter_lvl6) > 0:
+                st.markdown('#')
+                filter_2 = st.multiselect(
+                    "Choose filter 2",
+                    options=['All'] + filter_lvl6,
+                    default=None,
+                )
+                if len(filter_2) > 0:
+                    if 'All' in filter_2:
+                        filter_2 = filter_lvl6
+                    fd_final = fd_split.loc[
+                            fd_split.FIELD_LEVEL_5.isin(filter_1) &
+                            fd_split.FIELD_LEVEL_6.isin(filter_2)
+                        ]
+                else:
+                    fd_final = fd_split.loc[
+                            fd_split.FIELD_LEVEL_5.isin(filter_1) 
+                        ]
+            else:
+                fd_final = fd_split.loc[
+                        fd_split.FIELD_LEVEL_5.isin(filter_1) 
+                    ]
+            # select H3 resolution
+            h3_res = st.selectbox(
+                "Choose resolution of H3",
+                [4, 5, 6],
+                2
+            )
+            # data table postfix
+            table_id = fd_final.TABLE_NUMBER.str[:3].unique()[0]
+            # table name and columns for actual data
+            df_table = TABLE_DATA.format(year=year, table_id=table_id)
+            cols = list(fd_final.TABLE_ID.unique())
+            # read data
+            df = querry.read_dataset(df_table, cols)
+            df = df.loc[
+                df[TABLE_INDEX].isin(cbg_states[TABLE_INDEX])
+            ]
+            # filter coord
+            cbg_coord_f = cbg_coord.loc[
+                cbg_coord[TABLE_INDEX].isin(cbg_states[TABLE_INDEX])
+            ]
+            # add h3 index to coordinates
+            cbg_coord_h3 = geo_utils.add_h3_index(cbg_coord_f, resolution=H3_RESOLUTION)
+            # add geometry
+            df_h3_geom = geo_utils.add_geography(df, cbg_coord_h3)
+            # check selected resolution
+            df_h3_geom = geo_utils.h3_resolution_change(df_h3_geom, h3_res)
+            df_h3_geom["value_count"] = df_h3_geom[cols].sum(axis=1)
+            # add log value
+            df_h3_geom['log2_value_count'] = np.log2(df_h3_geom['value_count'])
+            df_h3_geom.loc[np.isinf(df_h3_geom['log2_value_count']), 'log2_value_count'] = 0 # replacing inf with 0 (still 0 peopl in hexagon)
+            # plot h3 map
+            fig = geo_utils.plotly_h3(df_h3_geom)
+            st.markdown('#')
+            st.plotly_chart(fig, use_container_width=True, theme="streamlit")
 
-    fig = geo_utils.plotly_h3(df_h3_geom)
-    # fd_filtered = querry.field_description(split, filter_1, filter_2)
-    # if st.checkbox('Show raw data'):
-    #     st.subheader('Raw Data')
-    #     st.dataframe(fd_filtered)
-    st.markdown('#')
-    st.plotly_chart(fig, use_container_width=True, theme="streamlit")
+            st.markdown('#')
+            st.subheader('Explore descriptive statistics of hexagons')
+            with st.container():
+                hist1, hist2 = st.columns(2)
+                with hist1:
+                    fig1 = geo_utils.plotly_hist_all(df=df_h3_geom, h3_level=str(h3_res))
+                    st.plotly_chart(fig1)
+                with hist2: # the safest option should be to just exclude outliers
+                    df1 = df_h3_geom.loc[
+                        (df_h3_geom['value_count'] <= df_h3_geom[["value_count"]].quantile(0.95)[0]) &
+                        (df_h3_geom['value_count'] > 0),
+                        ['value_count']
+                    ].copy()
+                    fig2 = geo_utils.plotly_hist_out(df1, h3_level=str(h3_res))
+                    st.plotly_chart(fig2)
 
-    st.markdown('#')
-    st.subheader('Explore descriptive statistics of hexagons')
-    with st.container():
-        hist1, hist2 = st.columns(2)
-        with hist1:
-            fig1 = geo_utils.plotly_hist_all(df=df_h3_geom, h3_level=str(h3_res))
-            st.plotly_chart(fig1)
-        with hist2: # the safest option should be to just exclude outliers
-            df1 = df_h3_geom.loc[(df_h3_geom['value_count'] <= df_h3_geom[["value_count"]].quantile(0.95)[0]) & (df_h3_geom['value_count'] > 0),
-                                 ['value_count']].copy()
-            fig2 = geo_utils.plotly_hist_out(df1, h3_level=str(h3_res))
-            st.plotly_chart(fig2)
-
-    st.markdown('#')
-    with st.container():
-        tab1, tab2 = st.columns(2)
-        with tab1:
-            st.dataframe(pd.DataFrame(df_h3_geom['value_count'].describe()).transpose(), use_container_width=True)
-        with tab2:
-            st.dataframe(pd.DataFrame(df1['value_count'].describe()).transpose(), use_container_width=True)
-
-
-
-
-
-
-####
-
-
-
-# geojson_obj = hexagons_dataframe_to_geojson(
-#     df_h3_geom,
-#     hex_id_field="h3_index",
-#     value_field="log2_value_count",
-#     geometry_field="geometry"
-# )
-
-# fig = px.choropleth_mapbox(
-#     df_h3_geom,
-#     geojson=geojson_obj,
-#     locations="h3_index",
-#     color="value_count",
-#     color_continuous_scale="thermal", # "Viridis"
-#     range_color=(0, df_h3_geom["value_count"].max()),
-#     #color_continuous_midpoint = df_h3_geom["value_count"].median(),
-#     color_continuous_midpoint = np.quantile(df_h3_geom["value_count"], 0.05),
-#     hover_data=['value_count'],
-#     #mapbox_style="carto-positron",
-#     mapbox_style="open-street-map",
-#     zoom=3.5,
-#     center = {"lat": 37.0902, "lon": -95.7129},
-#     opacity=0.9,
-#     labels={"count":"# of fire ignitions"}
-# )
-# fig.update_layout(height=900)
-# fig.show()
-
-
-# geojson_obj = hexagons_dataframe_to_geojson(
-#     df_h3_geom,
-#     hex_id_field="h3_index",
-#     value_field="log2_value_count",
-#     geometry_field="geometry"
-# )
-
-# fig = px.choropleth_mapbox(
-#     df_h3_geom,
-#     geojson=geojson_obj,
-#     locations="h3_index",
-#     color="log2_value_count",
-#     color_continuous_scale="thermal", # "Viridis"
-#     range_color=(0,  df_h3_geom["log2_value_count"].max()),
-#     #range_color=(0,  19),
-#     hover_data={'h3_index': True, 'value_count':True, 'log2_value_count':False},
-#     #mapbox_style="carto-positron",
-#     mapbox_style="open-street-map",
-#     zoom=3.5,
-#     center = {"lat": 37.0902, "lon": -95.7129},
-#     opacity=0.9,
-#     #labels={"count":"# of fire ignitions"}
-# )
-# #fig.update_coloraxes(colorbar_dtick=5)
-# log_ticks = np.arange(0,  df_h3_geom["log2_value_count"].max(), 5).tolist()
-# true_ticks = [2**i if i != 0 else i for i in log_ticks]
-# fig.update_coloraxes(colorbar_dtick=5, colorbar_tickvals=log_ticks, colorbar_ticktext=true_ticks)
-# #fig.update_coloraxes(showscale=False)
-# #fig.update_layout(coloraxis=list(dict(zip(df_h3_geom.log2_value_count, df_h3_geom.value_count))))
-# #fig.update_layout(coloraxis=dict(cmax=df_h3_geom["value_count"].max(), cmin=df_h3_geom["value_count"].min()))
-# #fig.update_coloraxes(colorbar_labelalias=dict(zip(df_h3_geom.log2_value_count, df_h3_geom.value_count)))
-# #fig.show()
-
-
-
-
-
-# # aaa = px.data.gapminder()
-
-# # fig = px.bar(aaa, x="continent", y="pop", color="continent",
-# #   animation_frame="year", animation_group="country", range_y=[0,4000000000])
-# # fig.show()
-
+            st.markdown('#')
+            with st.container():
+                tab1, tab2 = st.columns(2)
+                with tab1:
+                    st.dataframe(
+                        pd.DataFrame(
+                            df_h3_geom['value_count'].describe()
+                        ).transpose(),
+                        use_container_width=True
+                    )
+                with tab2:
+                    st.dataframe(
+                        pd.DataFrame(
+                            df1['value_count'].describe()
+                        ).transpose(),
+                        use_container_width=True
+                    )
