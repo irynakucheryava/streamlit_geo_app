@@ -28,7 +28,6 @@ binaryornot==0.4.4
 black==22.6.0
 bleach==4.1.0
 blinker==1.6.1
-blosc==1.21.3
 bokeh==2.4.3
 bottleneck==1.3.5
 brotli==1.0.9
