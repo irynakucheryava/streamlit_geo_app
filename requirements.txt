@@ -32,7 +32,6 @@ bokeh==2.4.3
 bottleneck==1.3.5
 brotli==1.0.9
 brotlipy==0.7.0
-brunsli==0.1
 bzip2==1.0.8
 c-ares==1.18.1
 ca-certificates==2023.01.10
