@@ -38,11 +38,12 @@ STATIC_COLUMNS = {
     ],
     "states": [
         TABLE_INDEX,
+        'STATE',
     ]
 }
 # static where
 STATIC_WHERE = {
-    "description": f'''FIELD_LEVEL_1 = 'Estimate' 
+    "description": f'''FIELD_LEVEL_1 = 'Estimate'
         and LOWER(TABLE_TITLE) not like '%median%'
         and TABLE_NUMBER in ({list_concat(FIELD_PREFIXES)})
         and FIELD_LEVEL_5 is not null
@@ -54,31 +55,9 @@ STATIC_WHERE = {
 
 def init_connection():
     """Connector to snowflake."""
-    sec = False
-    if sec: # st.secrets:
-        session = Session.builder.configs(**st.secrets["snowflake"]).create()
-    else:
-        # session = Session.builder.configs(
-        #     {
-        #         "account"   : credentials["account"],
-        #         "user"      : credentials["user"],
-        #         "password"  : credentials["password"],
-        #         "role"      : credentials["role"],
-        #         "warehouse" : credentials["warehouse"],
-        #         "database"  : credentials["database"],
-        #         "schema"    : credentials["schema"],
-        #     }
-        # )
-        connection_parameters = {
-            "account"   : "jkwomdq-qk60499",
-            "user"      : "irynakucheryava",
-            "password"  : "Kucheryava060393IK/",
-            "role"      : "ACCOUNTADMIN",
-            "warehouse" : "COMPUTE_WH",
-            "database"  : "US_OPEN_CENSUS_DATA__NEIGHBORHOOD_INSIGHTS__FREE_DATASET",
-            "schema"    : "PUBLIC"
-        }
-        session = Session.builder.configs(connection_parameters).create()
+
+    session = Session.builder.configs(st.secrets["snowflake"]).create()
+
     return session
 
 
