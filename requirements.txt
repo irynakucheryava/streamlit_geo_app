@@ -26,7 +26,6 @@ bcrypt==3.2.0
 beautifulsoup4==4.11.1
 binaryornot==0.4.4
 black==22.6.0
-blas==1.0
 bleach==4.1.0
 blinker==1.6.1
 blosc==1.21.3
