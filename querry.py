@@ -108,3 +108,13 @@ def read_dataset(table : str, columns : list = None):
     return df
 
 
+def read_analytics(year):
+    """Read joined dataset for static analytic."""
+    session = init_connection()
+    script = open("queries/analytics_sql.sql", 'r')
+    query = script.read()
+    query_final = query.format(year=year)
+    df = pd.DataFrame(session.sql(query=query_final).collect())
+    df.dropna(axis=0, inplace=True) # for 2019
+    return df
+
