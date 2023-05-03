@@ -6,10 +6,14 @@ import h3_geomap
 import comparison
 import analytics
 import home
+import clustering
 
-PAGES = ['HOME',
+
+PAGES = [
+    'HOME',
     'H3 GEO LENS',
     'DEMOGRAPHIC ANALYTICS',
+    'CLUSTERING'
 ]
 
 def run_UI():
@@ -69,6 +73,15 @@ def run_UI():
             Hexagon view of demographic data
         """)
         h3_geomap.h3_geomap_UI()
+    elif page == 'CLUSTERING':
+        st.sidebar.write(
+            """
+            ## About
+
+            KMeans model for selected demographic features
+            """
+        )
+        clustering.clustering_UI()
     else:
         analytics.analytics_UI()
 

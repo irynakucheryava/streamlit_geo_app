@@ -97,7 +97,8 @@ def plotly_h3(df, col, col_log):
         #labels={"count":"# of fire ignitions"}
     )
     #fig.update_coloraxes(colorbar_dtick=5)
-    log_ticks = np.arange(0,  df[col_log].max(), np.round(df[col_log].max()/5)).tolist()
+    # here np.round(df[col_log].max() / 5) can be 0 which cause for Hawaii
+    log_ticks = np.arange(0, df[col_log].max(), np.round(df[col_log].max() / 5)).tolist()
     true_ticks = [2**i if i != 0 else i for i in log_ticks]
     fig.update_coloraxes(colorbar_dtick=5, colorbar_tickvals=log_ticks,
                          colorbar_ticktext=true_ticks)
@@ -122,6 +123,14 @@ def plotly_hist_all(df, col,x_label, color, title, cumulative=False):
     fig.update_layout(height=600)
     return fig
 
+
+def quantile_filter(df : pd.DataFrame, col : str, q=0.95):
+    df_filtered = df.loc[
+        (df[col] <= df[[col]].quantile(q)[0]) &
+        (df[col] > 0),
+        [col]
+    ]
+    return df_filtered
 
 
 

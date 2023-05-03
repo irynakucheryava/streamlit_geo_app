@@ -4,21 +4,13 @@ import geo_utils
 import pandas as pd
 import numpy as np
 
-
 from utils import list_concat
-from CONSTANTS import YEAR, STATES, TABLE_DATA, TABLE_INDEX # is TABLE_INDEX needed to be imported? it is only used a few times? same for TABLE_DATA
 
-# shouldn't we then put split and h3 reoslution to constants then?
-
-SPLITS = [
-    'Sex By Age',
-    'Race',
-    'Travel Time To Work',
-    'Households By Type',
-    "Total Fields Of Bachelor's Degrees Reported",
-    'Occupancy Status',
-    'Value'
-]
+from CONSTANTS import (
+    YEAR, STATES, 
+    TABLE_DATA, TABLE_INDEX, # is TABLE_INDEX needed to be imported? it is only used a few times? same for TABLE_DATA
+    FIELD_PREFIXES,
+)
 
 H3_RESOLUTION = 6
 
@@ -27,41 +19,48 @@ def h3_geomap_UI():
     st.title('H3 geomap')
     st.header('''Explore US Census data though H3 Geo lens by navigating through demographic filters.''')
     st.markdown('#')
-    st.write("""
-            By default we show a count of the whole population within each hexagon at H3 level 4 in 2020.
-            Use filters to see a geo representation of a different subset of the data.
-            Please note that Filter 2 will be shown only if available.
-            Select 'All' if you want all option for a given filter to be used.
-            If you select 'All' in conjunction with another option(s), then all options will be used.
-            Once ready, click the "Show results" button to display H3 geo map.
-            """)
-
+    st.write(
+        """
+        By default we show a count of the whole population within each hexagon at H3 level 4 in 2020.
+        Use filters to see a geo representation of a different subset of the data.
+        Please note that Filter 2 will be shown only if available.
+        Select 'All' if you want all option for a given filter to be used.
+        If you select 'All' in conjunction with another option(s), then all options will be used.
+        Once ready, click the "Show results" button to display H3 geo map.
+        """)
     #st.markdown('#')
     with st.container():
         sel1, sel2, sel3 = st.columns(3)
+        # year
         with sel1:
             year = st.selectbox(
                 "Year",
                 YEAR,
                 1,
             )
-            #cbg_coord = querry.read_static(year, name="geographic", use_where=False)
             # field description
             fd = querry.read_static(year, "description")
+        # states
         with sel2:
             states = st.multiselect(
                 label="State",
                 options=['All'] + list(STATES.keys()),
                 default='All',
             )
+        # split
         with sel3:
+            splits = fd.loc[
+                fd.TABLE_NUMBER.isin(FIELD_PREFIXES),
+                "TABLE_TITLE"
+            ].unique().tolist()
             selected_var = st.selectbox(
                 "What variable would you like to look at?",
-                SPLITS,
+                splits,
                 0,
             )
     with st.container():
         sel4, sel5, sel6 = st.columns(3)
+        # first level filter
         with sel4:
             # select description for chosen split
             fd_split = fd.loc[fd.TABLE_TITLE == selected_var]
@@ -72,26 +71,45 @@ def h3_geomap_UI():
                 options=['All'] + filter_1_choices,
                 default='All',
             )
+        # second level filter
         with sel5:
             if 'All' in filter_1:
-                filter_2_choices = list(filter(None, fd_split.loc[fd_split.FIELD_LEVEL_5.isin(filter_1_choices), "FIELD_LEVEL_6"].unique()))
+                filter_2_choices = list(
+                    filter(
+                        None,
+                        fd_split.loc[
+                            fd_split.FIELD_LEVEL_5.isin(filter_1_choices),
+                            "FIELD_LEVEL_6"
+                        ].unique()
+                    )
+                )
             else:
-                filter_2_choices = list(filter(None, fd_split.loc[fd_split.FIELD_LEVEL_5.isin(filter_1), "FIELD_LEVEL_6"].unique()))
-
+                filter_2_choices = list(
+                    filter(
+                        None,
+                        fd_split.loc[
+                            fd_split.FIELD_LEVEL_5.isin(filter_1),
+                            "FIELD_LEVEL_6"
+                        ].unique()
+                    )
+                )
             filter_2 = st.multiselect(
                 label="Select the second filter",
                 options=['All'] + filter_2_choices,
                 default='All',
                 )
+        # h3 index resolution
         with sel6:
             h3_res = st.selectbox(
-                        "Choose H3 resolution",
-                        [4, 5, 6],
-                        0
-                    )
+                "Choose H3 resolution",
+                [4, 5, 6],
+                0
+            )
         st.markdown('#')
-        button = st.button(label='Show results',
-                           help='Select filters and click the button')
+        button = st.button(
+            label='Show results',
+            help='Select filters and click the button'
+        )
         if button:
             # filtering census block group codes for selected states
             if 'All' in states:
@@ -145,11 +163,15 @@ def h3_geomap_UI():
             df_h3_geom['log2_value_count'] = np.log2(df_h3_geom['count']) # this can be a function
 
             # finding an index - compared to hexagon national average at given H3 resolution
-            df_h3_geom['index_mean'] = df_h3_geom['count'].apply(lambda x: x/df_h3_geom['count'].mean()).round(2)
+            df_h3_geom['index_mean'] = df_h3_geom['count'].apply(
+                lambda x: x / df_h3_geom['count'].mean()
+            ).round(2)
             df_h3_geom['index_log'] = np.log2(df_h3_geom['index_mean'])
 
             # calculating index based on median
-            df_h3_geom['index_median'] = df_h3_geom['count'].apply(lambda x: x/df_h3_geom['count'].median()).round(2)
+            df_h3_geom['index_median'] = df_h3_geom['count'].apply(
+                lambda x: x / df_h3_geom['count'].median() # here median can be 0. Mb median + 1?
+            ).round(2)
             df_h3_geom['index_med_log'] = np.log2(df_h3_geom['index_median'])
 
             # replacing Inf with 0
@@ -157,26 +179,41 @@ def h3_geomap_UI():
 
             tab1, tab2, tab3 = st.tabs(['Raw', 'Mean Index', 'Median Index'])
             with tab1:
-                st.write('''
-                         This map shows the count of people within every H3 hexagon who meet the criteria selected in the filter section.
-                         ''')
-                fig1 = geo_utils.plotly_h3(df=df_h3_geom, col='count', col_log='log2_value_count')
+                st.write(
+                    '''
+                    This map shows the count of people within every H3 hexagon 
+                    who meet the criteria selected in the filter section.
+                    '''
+                )
+                fig1 = geo_utils.plotly_h3(
+                    df=df_h3_geom,
+                    col='count',
+                    col_log='log2_value_count'
+                )
                 st.plotly_chart(fig1, use_container_width=True, theme="streamlit")
 
-                count_filtered = df_h3_geom.loc[
-                    (df_h3_geom['count'] <= df_h3_geom[["count"]].quantile(0.95)[0]) & (df_h3_geom['count'] > 0),['count']]
+                count_filtered = geo_utils.quantile_filter(df_h3_geom, 'count')
+                # count_filtered = df_h3_geom.loc[
+                #     (df_h3_geom['count'] <= df_h3_geom[["count"]].quantile(0.95)[0]) &
+                #     (df_h3_geom['count'] > 0),
+                #     ['count']
+                # ]
 
                 with st.container():
-                    st.write('Explore hexagon size distribution for selected population at H' + str( h3_res) + ' level.')
+                    st.write(
+                        'Explore hexagon size distribution for selected population at H' + str(h3_res) + ' level.'
+                    )
                     col1, col2 = st.columns(2)
                     with col1:
                         #st.write('The histogram shows the raw distribution of all hexagon couns at H' + str( h3_res) + ' level.')
-                        hist1 = geo_utils.plotly_hist_all(df=df_h3_geom, col='count',
-                                                          cumulative=False,
-                                                          x_label="Number of people within a hexagon",
-                                                          color='gold',
-                                                          title='Distribution of all hexagon counts'
-                                                          )
+                        hist1 = geo_utils.plotly_hist_all(
+                            df=df_h3_geom,
+                            col='count',
+                            cumulative=False,
+                            x_label="Number of people within a hexagon",
+                            color='gold',
+                            title='Distribution of all hexagon counts'
+                        )
                         st.plotly_chart(hist1, use_container_width=True, theme='streamlit')
                     with col2:
                         # st.write('''The histogram shows the processed distribution of all hexagon couns at H' + str(h3_res) + ' level.
@@ -189,38 +226,52 @@ def h3_geomap_UI():
                             x_label="Number of people within a hexagon",
                             color='gold',
                             title='Distribution of hexagon counts above 0 and below 95th percentile'
-                            )
+                        )
                         st.plotly_chart(hist2, use_container_width=True, theme='streamlit')
 
 
-                hist_df_1 = pd.concat([pd.DataFrame(df_h3_geom['count']).describe().transpose(),
-                                       pd.DataFrame(count_filtered.describe()).transpose()])
+                hist_df_1 = pd.concat(
+                    [
+                        pd.DataFrame(df_h3_geom['count']).describe().transpose(),
+                        pd.DataFrame(count_filtered.describe()).transpose()
+                    ]
+                )
                 hist_df_1.index = ['raw count', 'filtered count']
                 st.dataframe(hist_df_1, use_container_width=True)
 
             with tab2:
-                st.write('''This map shows an index - a count within each hexagon compared to the MEAN value across all hexagons for filtered population.
-                         For example, a value of 200 means that compared to an average count, a given hexagon contains twice as many people,
-                         while a value of 50 means twice as less.
-                         Note that index is calculated taken all selected states into account.
-                         ''')
-                fig2 = geo_utils.plotly_h3(df_h3_geom, col='index_mean',col_log='index_log')
+                st.write(
+                    '''This map shows an index - a count within each hexagon compared to the MEAN value across all hexagons for filtered population. 
+                    For example, a value of 200 means that compared to an average count, a given hexagon contains twice as many people, 
+                    while a value of 50 means twice as less. 
+                    Note that index is calculated taken all selected states into account.
+                    '''
+                )
+                fig2 = geo_utils.plotly_h3(df_h3_geom, col='index_mean', col_log='index_log')
                 st.plotly_chart(fig2, use_container_width=True, theme="streamlit")
-
-                ind_mean_filtered = df_h3_geom.loc[
-                    (df_h3_geom['index_mean'] <= df_h3_geom[['index_mean']].quantile(0.95)[0]) & (df_h3_geom['index_mean'] > 0),['index_mean']]
+                
+                ind_mean_filtered = geo_utils.quantile_filter(df_h3_geom, 'index_mean')
+                # ind_mean_filtered = df_h3_geom.loc[
+                #     (df_h3_geom['index_mean'] <= df_h3_geom[['index_mean']].quantile(0.95)[0]) &
+                #     (df_h3_geom['index_mean'] > 0),
+                #     ['index_mean']
+                # ]
 
                 with st.container():
-                    st.write('Explore hexagon index against mean distribution for selected population at H' + str(h3_res) + ' level.')
+                    st.write(
+                        'Explore hexagon index against mean distribution for selected population at H' + str(h3_res) + ' level.'
+                    )
                     col3, col4 = st.columns(2)
                     with col3:
                         #st.write('The histogram shows the raw distribution of all hexagon couns at H' + str( h3_res) + ' level.')
-                        hist3 = geo_utils.plotly_hist_all(df=df_h3_geom, col='index_mean',
-                                                          cumulative=False,
-                                                          x_label="Index against mean",
-                                                          color='darkviolet',
-                                                          title='Distribution of all hexagon indeces against mean'
-                                                          )
+                        hist3 = geo_utils.plotly_hist_all(
+                            df=df_h3_geom,
+                            col='index_mean',
+                            cumulative=False,
+                            x_label="Index against mean",
+                            color='darkviolet',
+                            title='Distribution of all hexagon indeces against mean'
+                        )
                         st.plotly_chart(hist3, use_container_width=True, theme='streamlit')
                     with col4:
                         # st.write('''The histogram shows the processed distribution of all hexagon couns at H' + str(h3_res) + ' level.
@@ -233,12 +284,15 @@ def h3_geomap_UI():
                             x_label="Index against mean",
                             color='darkviolet',
                             title='Distribution of hexagon indices against mean above 0 and below 95th percentile'
-                            )
+                        )
                         st.plotly_chart(hist4, use_container_width=True, theme='streamlit')
 
-
-                hist_df_2 = pd.concat([pd.DataFrame(df_h3_geom['index_mean']).describe().transpose(),
-                                       pd.DataFrame(ind_mean_filtered.describe()).transpose()])
+                hist_df_2 = pd.concat(
+                    [
+                        pd.DataFrame(df_h3_geom['index_mean']).describe().transpose(),
+                        pd.DataFrame(ind_mean_filtered.describe()).transpose()
+                    ]
+                )
                 hist_df_2.index = ['raw count', 'filtered count']
                 st.dataframe(hist_df_2, use_container_width=True)
             with tab3:
@@ -251,20 +305,26 @@ def h3_geomap_UI():
                 fig3 = geo_utils.plotly_h3(df_h3_geom, col='index_median',col_log='index_med_log')
                 st.plotly_chart(fig3, use_container_width=True, theme="streamlit")
 
-                ind_med_filtered = df_h3_geom.loc[
-                    (df_h3_geom['index_median'] <= df_h3_geom[['index_median']].quantile(0.95)[0]) & (df_h3_geom['index_median'] > 0),['index_median']]
+                ind_med_filtered = geo_utils.quantile_filter(df_h3_geom, 'index_median')
+                # ind_med_filtered = df_h3_geom.loc[
+                #     (df_h3_geom['index_median'] <= df_h3_geom[['index_median']].quantile(0.95)[0]) & 
+                #     (df_h3_geom['index_median'] > 0),
+                #     ['index_median']
+                # ]
 
                 with st.container():
                     st.write('Explore hexagon index against median distribution for selected population at H' + str(h3_res) + ' level.')
                     col5, col6 = st.columns(2)
                     with col5:
                         #st.write('The histogram shows the raw distribution of all hexagon couns at H' + str( h3_res) + ' level.')
-                        hist5 = geo_utils.plotly_hist_all(df=df_h3_geom, col='index_median',
-                                                          cumulative=False,
-                                                          x_label="Index against median",
-                                                          color='hotpink',
-                                                          title='Distribution of all hexagon indeces against median'
-                                                          )
+                        hist5 = geo_utils.plotly_hist_all(
+                            df=df_h3_geom,
+                            col='index_median',
+                            cumulative=False,
+                            x_label="Index against median",
+                            color='hotpink',
+                            title='Distribution of all hexagon indeces against median'
+                        )
                         st.plotly_chart(hist5, use_container_width=True, theme='streamlit')
                     with col6:
                         # st.write('''The histogram shows the processed distribution of all hexagon couns at H' + str(h3_res) + ' level.
@@ -277,11 +337,13 @@ def h3_geomap_UI():
                             x_label="Index against median",
                             color='hotpink',
                             title='Distribution of hexagon indices against median above 0 and below 95th percentile'
-                            )
+                        )
                         st.plotly_chart(hist6, use_container_width=True, theme='streamlit')
 
-
-                hist_df_3 = pd.concat([pd.DataFrame(df_h3_geom['index_median']).describe().transpose(),
-                                       pd.DataFrame(ind_med_filtered.describe()).transpose()])
+                hist_df_3 = pd.concat(
+                    [
+                        pd.DataFrame(df_h3_geom['index_median']).describe().transpose(),
+                        pd.DataFrame(ind_med_filtered.describe()).transpose()
+                    ])
                 hist_df_3.index = ['raw count', 'filtered count']
                 st.dataframe(hist_df_3, use_container_width=True)

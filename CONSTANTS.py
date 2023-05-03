@@ -10,16 +10,18 @@ YEAR = [
 # pattern of data tables
 TABLE_DATA = "{year}_CBG_{table_id}"
 
-# splits
-SPLITS = [
-    'Sex By Age',
-    'Race',
-    'Travel Time To Work',
-    'Households By Type',
-    "Total Fields Of Bachelor's Degrees Reported",
-    'Occupancy Status',
-    'Value'
+# codes to splits
+FIELD_PREFIXES = [
+    "B01001",
+    "B02001",
+    "B08303",
+    "B11012",
+    "B15012",
+    "B19001",
+    "B25002",
+    "B25075"
 ]
+
 
 # United States names and codes
 STATES = {

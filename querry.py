@@ -1,20 +1,9 @@
 import streamlit as st
 import pandas as pd
 from snowflake.snowpark.session import Session
-from CONSTANTS import TABLE_INDEX
+from CONSTANTS import TABLE_INDEX, FIELD_PREFIXES
 from utils import list_concat
 
-
-FIELD_PREFIXES = [
-    "B01001",
-    "B02001",
-    "B08303",
-    "B11012",
-    "B15012",
-    "B19001",
-    "B25002",
-    "B25075"
-]
 
 # pattern for static tables
 STATIC_TABLES = {
@@ -78,6 +67,7 @@ def read_table(table : str, columns : list = None, where: str = None):
     return df
 
 
+@st.cache_data
 def read_static(year, name, use_where : bool = True, **kwards):
     """Read static table"""
     table = STATIC_TABLES[name].format(year=year)
@@ -92,6 +82,7 @@ def read_static(year, name, use_where : bool = True, **kwards):
     return df_static
 
 
+@st.cache_data
 def read_dataset(table : str, columns : list = None):
     """Read tables with actual data."""
     session = init_connection()
@@ -108,6 +99,7 @@ def read_dataset(table : str, columns : list = None):
     return df
 
 
+@st.cache_data
 def read_analytics(year):
     """Read joined dataset for static analytic."""
     session = init_connection()
