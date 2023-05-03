@@ -6,7 +6,7 @@ import pandas as pd
 def home_UI():
 
     st.title(
-    'USA GEO ANALYTICS :earth_americas:')
+    '🏠 USA GEO ANALYTICS')
 
     st.subheader('''
              This app helps you visually explore various demographics in the USA by adopting Uber H3 Hexagonal Hierarchical Spatial Index framework.
