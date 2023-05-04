@@ -1,15 +1,13 @@
 import streamlit as st
 import querry
-#from utils import list_concat
 import pandas as pd
 import plotly.express as px
-#import numpy as np
 from analytics_utils import data_count
 from CONSTANTS import YEAR, STATES, TABLE_DATA
 
 
 def analytics_UI():
-    st.title('Static analytics for chosen year and state')
+    st.title(' 👨‍👩‍👧‍👦 Demographic statistics for chosen year and state')
     with st.container():
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -116,7 +114,7 @@ def analytics_UI():
                                        #yanchor="bottom",
                                        #y=1.02,
                                        xanchor="right",
-                                       x=1.1),
+                                       x=1),
                                    title={
                                        'text': 'Population by age',
                                        #'y':0.9,
@@ -211,7 +209,7 @@ def analytics_UI():
                                        #yanchor="bottom",
                                        #y=1.02,
                                        xanchor="right",
-                                       x=1),
+                                       x=0.8),
                                    title={
                                        'text': 'Occupancy status of housing unit',
                                        #'y':0.9,
@@ -250,7 +248,7 @@ def analytics_UI():
         st.header('''Education and Income''')
         st.markdown('#')
         with st.container():
-            col9, col10,  = st.columns(2)
+            col9, col10, col11  = st.columns(3)
             with col9:
                 education_df = data_count(data=data,
                                           col='EDUCATION',
@@ -270,6 +268,7 @@ def analytics_UI():
                         'xanchor': 'center',
                         #'yanchor': 'top'
                         },
+                    legend_font_size=9,
                     xaxis_title=None)
                 fig3.update_xaxes(showticklabels=False)
                 st.plotly_chart(fig3, use_container_width=True, theme='streamlit')
@@ -300,21 +299,29 @@ def analytics_UI():
                                            #'yanchor': 'top'
                                            })
                     st.plotly_chart(pie4, use_container_width=True, theme='streamlit')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                with col11:
+                    travel_df = data_count(data=data,
+                                           col='TIME',
+                                           col_name='Time')
+                    pie5 = px.pie(travel_df,
+                                  values='Count',
+                                  names='Time',
+                                  color='Time',
+                                  color_discrete_sequence=px.colors.sequential.Plasma)
+                    pie5.update_layout(legend_font_size=9,
+                                       legend=dict(
+                                           orientation="v",
+                                           itemwidth=50,
+                                           #yanchor="bottom",
+                                           #y=1.02,
+                                           xanchor="right",
+                                           x=1.1),
+                                       title={
+                                           'text': 'Travel time to work',
+                                           #'y':0.9,
+                                           'x':0.5,
+                                           'xanchor': 'center',
+                                           #'yanchor': 'top'
+                                           })
+                    st.plotly_chart(pie5, use_container_width=True, theme='streamlit')
 

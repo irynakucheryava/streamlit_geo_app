@@ -7,7 +7,7 @@ import numpy as np
 from utils import list_concat
 
 from CONSTANTS import (
-    YEAR, STATES, 
+    YEAR, STATES,
     TABLE_DATA, TABLE_INDEX, # is TABLE_INDEX needed to be imported? it is only used a few times? same for TABLE_DATA
     FIELD_PREFIXES,
 )
@@ -16,7 +16,7 @@ H3_RESOLUTION = 6
 
 
 def h3_geomap_UI():
-    st.title('H3 geomap')
+    st.title('🌎 H3 geomap')
     st.header('''Explore US Census data though H3 Geo lens by navigating through demographic filters.''')
     st.markdown('#')
     st.write(
@@ -154,7 +154,7 @@ def h3_geomap_UI():
             # merging df and cbg_coord_h3 by cbg
             df_h3_geom = geo_utils.add_geography(df, cbg_coord_h3)
 
-            # change H# level to  user selected level
+            # change H3 level to  user selected level
             if h3_res != H3_RESOLUTION:
                 df_h3_geom = geo_utils.h3_resolution_change(df_h3_geom, h3_res)
 
@@ -181,7 +181,7 @@ def h3_geomap_UI():
             with tab1:
                 st.write(
                     '''
-                    This map shows the count of people within every H3 hexagon 
+                    This map shows the count of people within every H3 hexagon
                     who meet the criteria selected in the filter section.
                     '''
                 )
@@ -241,15 +241,15 @@ def h3_geomap_UI():
 
             with tab2:
                 st.write(
-                    '''This map shows an index - a count within each hexagon compared to the MEAN value across all hexagons for filtered population. 
-                    For example, a value of 200 means that compared to an average count, a given hexagon contains twice as many people, 
-                    while a value of 50 means twice as less. 
+                    '''This map shows an index - a count within each hexagon compared to the MEAN value across all hexagons for filtered population.
+                    For example, a value of 200 means that compared to an average count, a given hexagon contains twice as many people,
+                    while a value of 50 means twice as less.
                     Note that index is calculated taken all selected states into account.
                     '''
                 )
                 fig2 = geo_utils.plotly_h3(df_h3_geom, col='index_mean', col_log='index_log')
                 st.plotly_chart(fig2, use_container_width=True, theme="streamlit")
-                
+
                 ind_mean_filtered = geo_utils.quantile_filter(df_h3_geom, 'index_mean')
                 # ind_mean_filtered = df_h3_geom.loc[
                 #     (df_h3_geom['index_mean'] <= df_h3_geom[['index_mean']].quantile(0.95)[0]) &
@@ -302,12 +302,12 @@ def h3_geomap_UI():
                              while a value of 50 means twice as less.
                              Note that index is calculated taken all selected states into account.
                          ''')
-                fig3 = geo_utils.plotly_h3(df_h3_geom, col='index_median',col_log='index_med_log')
+                fig3 = geo_utils.plotly_h3(df_h3_geom, col='index_median', col_log='index_med_log')
                 st.plotly_chart(fig3, use_container_width=True, theme="streamlit")
 
                 ind_med_filtered = geo_utils.quantile_filter(df_h3_geom, 'index_median')
                 # ind_med_filtered = df_h3_geom.loc[
-                #     (df_h3_geom['index_median'] <= df_h3_geom[['index_median']].quantile(0.95)[0]) & 
+                #     (df_h3_geom['index_median'] <= df_h3_geom[['index_median']].quantile(0.95)[0]) &
                 #     (df_h3_geom['index_median'] > 0),
                 #     ['index_median']
                 # ]

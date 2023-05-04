@@ -8,3 +8,4 @@ snowflake-snowpark-python==1.3.0
 Pillow==9.4.0
 streamlit==1.21.0
 snowflake-connector-python==3.0.2
+scikit-learn==1.2.1
