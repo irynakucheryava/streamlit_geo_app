@@ -16,7 +16,7 @@ from CONSTANTS import YEAR, STATES, TABLE_INDEX, COLUMNS
 
 def clustering_UI():
     st.title("Clustering page")
-    st.header("Build clusters out of census block groups based on selected features")
+    st.header("Select location, features of interest, number of clusters, desired H3 resolution and click 'Create clusters button'")
     st.markdown('#')
     with st.container():
         col1, col2, col3 = st.columns(3)
@@ -100,17 +100,10 @@ def clustering_UI():
         # deleting hexagons withs 0 across selected features
         df_h3_geom = df_h3_geom[np.invert(df_h3_geom[features].sum(axis=1) == 0)]
 
-        # scaling values
-        scaler = MinMaxScaler()
-        norm_features = ['norm_' + i for i in features]
-        df_h3_geom[norm_features] = scaler.fit_transform(df_h3_geom[features])
-
-        # fitting kmeans
-        kmeans = KMeans(n_clusters=n_clusters, n_init="auto")
-        labels = kmeans.fit_predict(df_h3_geom[norm_features])
-        df_h3_geom['cluster'] = labels
-        df_h3_geom['cluster'] = df_h3_geom['cluster'].astype('str')
-        df_h3_geom = df_h3_geom.sort_values('cluster')
+        # leaving only hexagons where valies are not above 95th percentile
+        keep = np.invert(((df_h3_geom[features] > df_h3_geom[features].quantile(
+            0.95)).sum(axis=1)) == len(features))
+        df_h3_geom_95 = df_h3_geom[keep].copy()
 
         #st.markdown('#')
         st.markdown("""---""")
@@ -118,155 +111,347 @@ def clustering_UI():
         st.header('''Basic cluster statistics''')
         st.markdown('#')
 
-        with st.container():
-            col1, col2 = st.columns(2)
-            with col1:
-                df_count = df_h3_geom['cluster'].value_counts().reset_index()
-                df_count.columns = ['Cluster', 'Number of hexagons']
-                df_count['Cluster'] = df_count['Cluster'].astype(object)
-                df_count = df_count.sort_values('Cluster')
-                st.markdown('#')
-                st.markdown('#')
-                st.markdown('#')
-                st.markdown('#')
-                pie5 = px.pie(df_count,
-                              values='Number of hexagons',
-                              names='Cluster',
-                              color='Cluster',
-                              color_discrete_sequence=px.colors.sequential.Agsunset)
-                pie5.update_layout(legend_font_size=9,
-                                   legend=dict(
-                                       orientation="v",
-                                       itemwidth=50,
-                                       #yanchor="bottom",
-                                       #y=1.02,
-                                       xanchor="right",
-                                       x=0.9),
-                                   title={
-                                       'text': 'Number of hexagons in each cluster',
-                                       #'y':0.9,
-                                       'x':0.5,
-                                       'xanchor': 'center',
-                                       #'yanchor': 'top'
-                                       })
-                st.plotly_chart(pie5, use_container_width=True, theme='streamlit')
+        tab1, tab2, = st.tabs(['All non empty hexagons', 'Hexagons below 95th percentile'])
 
-            with col2: # scatterplot
-                #df_h3_geom['cluster'] = df_h3_geom['cluster'].astype('str')
-                if len(features) > 2:
-                    fig = px.scatter_3d(df_h3_geom,
-                                        x=features[0],
-                                        y=features[1],
-                                        z=features[2],
-                                        color='cluster',
-                                        color_discrete_sequence=px.colors.sequential.Agsunset)
-                    fig.update_layout(height=700)
-                else:
-                    fig = px.scatter(df_h3_geom,
-                                     x=features[0],
-                                     y=features[1],
-                                     color='cluster',
-                                     color_discrete_sequence=px.colors.sequential.Agsunset)
-                    fig.update_layout(height=600)
+        with tab1:
+            st.write(
+                '''
+                Explore clusters created based on non empty hexagons. This means that,
+                depending on selected H3 resolution, all hexagons with 0 count across
+                all selected features are removed.
+                '''
+            )
+            # scaling values
+            scaler = MinMaxScaler()
+            norm_features = ['norm_' + i for i in features]
+            df_h3_geom[norm_features] = scaler.fit_transform(df_h3_geom[features])
 
-                fig.update_traces(marker_size = 9)
+            # fitting kmeans
+            kmeans = KMeans(n_clusters=n_clusters, n_init="auto")
+            labels = kmeans.fit_predict(df_h3_geom[norm_features])
+            df_h3_geom['cluster'] = labels
+            df_h3_geom['cluster'] = df_h3_geom['cluster'].astype('str')
+            df_h3_geom = df_h3_geom.sort_values('cluster')
 
 
-                st.plotly_chart(fig, use_container_width=True, theme='streamlit')
+            with st.container():
+                col1, col2 = st.columns(2)
+                with col1:
+                    df_count = df_h3_geom['cluster'].value_counts().reset_index()
+                    df_count.columns = ['Cluster', 'Number of hexagons']
+                    df_count['Cluster'] = df_count['Cluster'].astype(object)
+                    df_count = df_count.sort_values('Cluster')
+                    st.markdown('#')
+                    st.markdown('#')
+                    st.markdown('#')
+                    st.markdown('#')
+                    pie5 = px.pie(df_count,
+                                  values='Number of hexagons',
+                                  names='Cluster',
+                                  color='Cluster',
+                                  color_discrete_sequence=px.colors.sequential.Agsunset)
+                    pie5.update_layout(legend_font_size=9,
+                                       legend=dict(
+                                           orientation="v",
+                                           itemwidth=50,
+                                           #yanchor="bottom",
+                                           #y=1.02,
+                                           xanchor="right",
+                                           x=0.9),
+                                       title={
+                                           'text': 'Number of hexagons in each cluster',
+                                           #'y':0.9,
+                                           'x':0.5,
+                                           'xanchor': 'center',
+                                           #'yanchor': 'top'
+                                           })
+                    st.plotly_chart(pie5, use_container_width=True, theme='streamlit')
 
-        st.markdown('#')
-        with st.container():
-            col1, col2 = st.columns(2)
-            with col1:
-                df_sum = df_h3_geom.groupby('cluster')[features].sum().reset_index()
-                df_sum = pd.melt(df_sum,
-                                 id_vars=['cluster'],
-                                 value_vars=features)
-                df_sum['cluster'] = df_sum['cluster'].astype(str)
+                with col2: # scatterplot
+                    #df_h3_geom['cluster'] = df_h3_geom['cluster'].astype('str')
+                    if len(features) > 2:
+                        fig = px.scatter_3d(df_h3_geom,
+                                            x=features[0],
+                                            y=features[1],
+                                            z=features[2],
+                                            color='cluster',
+                                            color_discrete_sequence=px.colors.sequential.Agsunset)
+                        fig.update_layout(height=700)
+                    else:
+                        fig = px.scatter(df_h3_geom,
+                                         x=features[0],
+                                         y=features[1],
+                                         color='cluster',
+                                         color_discrete_sequence=px.colors.sequential.Agsunset)
+                        fig.update_layout(height=600)
 
-                fig2 = px.bar(df_sum,
-                              color='cluster',
-                              y='value',
-                              x='variable',
-                              color_discrete_sequence=px.colors.sequential.Agsunset,
-                              height=600,
-                              )
-                fig2.update_layout(
-                    title={
-                        'text': 'Total number of population <br> in each cluster by selected features',
-                        #'y':0.9,
-                        'x':0.5,
-                        'xanchor': 'center',
-                        #'yanchor': 'top'
-                        },
-                    xaxis_title=None)
-                st.plotly_chart(fig2, use_container_width=True, theme='streamlit')
+                    fig.update_traces(marker_size = 9)
 
-            with col2:
-                df_mean = df_h3_geom.groupby('cluster')[features].mean().reset_index()
-                df_mean = pd.melt(df_mean,
-                                  id_vars=['cluster'],
-                                  value_vars=features)
-                df_mean['cluster'] = df_mean['cluster'].astype(str)
 
-                fig2 = px.bar(df_mean,
-                              color='cluster',
-                              y='value',
-                              x='variable',
-                              color_discrete_sequence=px.colors.sequential.Agsunset,
-                              height=600,
-                              )
-                fig2.update_layout(
-                    title={
-                        'text': 'Mean number of population <br> in each cluster by selected features',
-                        #'y':0.9,
-                        'x':0.5,
-                        'xanchor': 'center',
-                        #'yanchor': 'top'
-                        },
-                    xaxis_title=None)
-                st.plotly_chart(fig2, use_container_width=True, theme='streamlit')
+                    st.plotly_chart(fig, use_container_width=True, theme='streamlit')
 
-        st.markdown('#')
-        st.markdown('#')
-        st.markdown("""---""")
-        st.markdown('#')
-        st.header('''Plotting H3 clustered hexagons''')
-        st.markdown('#')
+            st.markdown('#')
+            with st.container():
+                col1, col2 = st.columns(2)
+                with col1:
+                    df_sum = df_h3_geom.groupby('cluster')[features].sum().reset_index()
+                    df_sum = pd.melt(df_sum,
+                                     id_vars=['cluster'],
+                                     value_vars=features)
+                    df_sum['cluster'] = df_sum['cluster'].astype(str)
 
-        #creating geo map with clusters
-        geojson_obj = hexagons_dataframe_to_geojson(
-            df_h3_geom,
-            hex_id_field="h3_index",
-            value_field='cluster',
-            geometry_field="geometry"
-        )
+                    fig2 = px.bar(df_sum,
+                                  color='cluster',
+                                  y='value',
+                                  x='variable',
+                                  color_discrete_sequence=px.colors.sequential.Agsunset,
+                                  height=600,
+                                  )
+                    fig2.update_layout(
+                        title={
+                            'text': 'Total number of population <br> in each cluster by selected features',
+                            #'y':0.9,
+                            'x':0.5,
+                            'xanchor': 'center',
+                            #'yanchor': 'top'
+                            },
+                        xaxis_title=None)
+                    st.plotly_chart(fig2, use_container_width=True, theme='streamlit')
 
-        hover = {'h3_index': True, 'cluster': True}
-        hover.update(dict(zip(features, len(features)*[True])))
+                with col2:
+                    df_mean = df_h3_geom.groupby('cluster')[features].mean().reset_index()
+                    df_mean = pd.melt(df_mean,
+                                      id_vars=['cluster'],
+                                      value_vars=features)
+                    df_mean['cluster'] = df_mean['cluster'].astype(str)
 
-        df_h3_geom['cluster'] = df_h3_geom['cluster'].astype('str')
+                    fig2 = px.bar(df_mean,
+                                  color='cluster',
+                                  y='value',
+                                  x='variable',
+                                  color_discrete_sequence=px.colors.sequential.Agsunset,
+                                  height=600,
+                                  )
+                    fig2.update_layout(
+                        title={
+                            'text': 'Mean number of population <br> in each cluster by selected features',
+                            #'y':0.9,
+                            'x':0.5,
+                            'xanchor': 'center',
+                            #'yanchor': 'top'
+                            },
+                        xaxis_title=None)
+                    st.plotly_chart(fig2, use_container_width=True, theme='streamlit')
 
-        fig = px.choropleth_mapbox(
-            df_h3_geom,
-            geojson=geojson_obj,
-            locations="h3_index",
-            color='cluster',
-            mapbox_style="open-street-map",
-            #color_discrete_sequence=px.colors.sequential.Agsunset,
-            color_discrete_map = {'0': 'pink', '1': 'hotpink', '2':'royalblue', '3':'purple', '4':'mediumslateblue'},
-            hover_data=hover,
-            zoom=3.5,
-            center = {"lat": 37.0902, "lon": -95.7129},
-            opacity=0.8
-        )
-        fig.update_coloraxes(colorbar_dtick=n_clusters,
-                              colorbar_tickvals=np.sort(df_h3_geom['cluster'].unique())),
-                              #colorbar_ticktext=np.sort(df_h3_geom['cluster'].unique()))
-        fig.update_layout(height=900, coloraxis_colorbar=dict(title='Clusters'))
+            st.markdown('#')
+            st.markdown('#')
+            st.markdown("""---""")
+            st.markdown('#')
+            st.header('''Plotting H3 clustered hexagons''')
+            st.markdown('#')
 
-        st.plotly_chart(fig, use_container_width=True, theme="streamlit")
+            #creating geo map with clusters
+            geojson_obj = hexagons_dataframe_to_geojson(
+                df_h3_geom,
+                hex_id_field="h3_index",
+                value_field='cluster',
+                geometry_field="geometry"
+            )
 
+            hover = {'h3_index': True, 'cluster': True}
+            hover.update(dict(zip(features, len(features)*[True])))
+
+            df_h3_geom['cluster'] = df_h3_geom['cluster'].astype('str')
+
+            fig = px.choropleth_mapbox(
+                df_h3_geom,
+                geojson=geojson_obj,
+                locations="h3_index",
+                color='cluster',
+                mapbox_style="open-street-map",
+                #color_discrete_sequence=px.colors.sequential.Agsunset,
+                color_discrete_map = {'0': 'pink', '1': 'hotpink', '2':'royalblue', '3':'purple', '4':'mediumslateblue'},
+                hover_data=hover,
+                zoom=3.5,
+                center = {"lat": 37.0902, "lon": -95.7129},
+                opacity=0.8
+            )
+            fig.update_coloraxes(colorbar_dtick=n_clusters,
+                                  colorbar_tickvals=np.sort(df_h3_geom['cluster'].unique())),
+                                  #colorbar_ticktext=np.sort(df_h3_geom['cluster'].unique()))
+            fig.update_layout(height=900, coloraxis_colorbar=dict(title='Clusters'))
+
+            st.plotly_chart(fig, use_container_width=True, theme="streamlit")
+
+        with tab2:
+            st.write(
+                '''
+                Explore clusters created with hexagons below 95th percentile.
+                All hexagons where the count of all selected features is above
+                their respective 95th percentile are removed. This is done to offer
+                a cleaner view of clusters, thus avoiding big locations (e.g. cities).
+                '''
+            )
+            # scaling values
+            scaler = MinMaxScaler()
+            norm_features = ['norm_' + i for i in features]
+            df_h3_geom_95[norm_features] = scaler.fit_transform(df_h3_geom_95[features])
+
+            # fitting kmeans
+            kmeans = KMeans(n_clusters=n_clusters, n_init="auto")
+            labels = kmeans.fit_predict(df_h3_geom_95[norm_features])
+            df_h3_geom_95['cluster'] = labels
+            df_h3_geom_95['cluster'] = df_h3_geom_95['cluster'].astype('str')
+            df_h3_geom_95 = df_h3_geom_95.sort_values('cluster')
+
+            with st.container():
+                col1, col2 = st.columns(2)
+                with col1:
+                    df_count = df_h3_geom_95['cluster'].value_counts().reset_index()
+                    df_count.columns = ['Cluster', 'Number of hexagons']
+                    df_count['Cluster'] = df_count['Cluster'].astype(object)
+                    df_count = df_count.sort_values('Cluster')
+                    st.markdown('#')
+                    st.markdown('#')
+                    st.markdown('#')
+                    st.markdown('#')
+                    pie5 = px.pie(df_count,
+                                  values='Number of hexagons',
+                                  names='Cluster',
+                                  color='Cluster',
+                                  color_discrete_sequence=px.colors.sequential.Agsunset)
+                    pie5.update_layout(legend_font_size=9,
+                                       legend=dict(
+                                           orientation="v",
+                                           itemwidth=50,
+                                           #yanchor="bottom",
+                                           #y=1.02,
+                                           xanchor="right",
+                                           x=0.9),
+                                       title={
+                                           'text': 'Number of hexagons in each cluster',
+                                           #'y':0.9,
+                                           'x':0.5,
+                                           'xanchor': 'center',
+                                           #'yanchor': 'top'
+                                           })
+                    st.plotly_chart(pie5, use_container_width=True, theme='streamlit')
+
+                with col2: # scatterplot
+                    #df_h3_geom_95['cluster'] = df_h3_geom_95['cluster'].astype('str')
+                    if len(features) > 2:
+                        fig = px.scatter_3d(df_h3_geom_95,
+                                            x=features[0],
+                                            y=features[1],
+                                            z=features[2],
+                                            color='cluster',
+                                            color_discrete_sequence=px.colors.sequential.Agsunset)
+                        fig.update_layout(height=700)
+                    else:
+                        fig = px.scatter(df_h3_geom_95,
+                                         x=features[0],
+                                         y=features[1],
+                                         color='cluster',
+                                         color_discrete_sequence=px.colors.sequential.Agsunset)
+                        fig.update_layout(height=600)
+
+                    fig.update_traces(marker_size = 9)
+
+
+                    st.plotly_chart(fig, use_container_width=True, theme='streamlit')
+
+            st.markdown('#')
+            with st.container():
+                col1, col2 = st.columns(2)
+                with col1:
+                    df_sum = df_h3_geom_95.groupby('cluster')[features].sum().reset_index()
+                    df_sum = pd.melt(df_sum,
+                                     id_vars=['cluster'],
+                                     value_vars=features)
+                    df_sum['cluster'] = df_sum['cluster'].astype(str)
+
+                    fig2 = px.bar(df_sum,
+                                  color='cluster',
+                                  y='value',
+                                  x='variable',
+                                  color_discrete_sequence=px.colors.sequential.Agsunset,
+                                  height=600,
+                                  )
+                    fig2.update_layout(
+                        title={
+                            'text': 'Total number of population <br> in each cluster by selected features',
+                            #'y':0.9,
+                            'x':0.5,
+                            'xanchor': 'center',
+                            #'yanchor': 'top'
+                            },
+                        xaxis_title=None)
+                    st.plotly_chart(fig2, use_container_width=True, theme='streamlit')
+
+                with col2:
+                    df_mean = df_h3_geom_95.groupby('cluster')[features].mean().reset_index()
+                    df_mean = pd.melt(df_mean,
+                                      id_vars=['cluster'],
+                                      value_vars=features)
+                    df_mean['cluster'] = df_mean['cluster'].astype(str)
+
+                    fig2 = px.bar(df_mean,
+                                  color='cluster',
+                                  y='value',
+                                  x='variable',
+                                  color_discrete_sequence=px.colors.sequential.Agsunset,
+                                  height=600,
+                                  )
+                    fig2.update_layout(
+                        title={
+                            'text': 'Mean number of population <br> in each cluster by selected features',
+                            #'y':0.9,
+                            'x':0.5,
+                            'xanchor': 'center',
+                            #'yanchor': 'top'
+                            },
+                        xaxis_title=None)
+                    st.plotly_chart(fig2, use_container_width=True, theme='streamlit')
+
+            st.markdown('#')
+            st.markdown('#')
+            st.markdown("""---""")
+            st.markdown('#')
+            st.header('''Plotting H3 clustered hexagons''')
+            st.markdown('#')
+
+            #creating geo map with clusters
+            geojson_obj = hexagons_dataframe_to_geojson(
+                df_h3_geom_95,
+                hex_id_field="h3_index",
+                value_field='cluster',
+                geometry_field="geometry"
+            )
+
+            hover = {'h3_index': True, 'cluster': True}
+            hover.update(dict(zip(features, len(features)*[True])))
+
+            df_h3_geom_95['cluster'] = df_h3_geom_95['cluster'].astype('str')
+
+            fig = px.choropleth_mapbox(
+                df_h3_geom_95,
+                geojson=geojson_obj,
+                locations="h3_index",
+                color='cluster',
+                mapbox_style="open-street-map",
+                #color_discrete_sequence=px.colors.sequential.Agsunset,
+                color_discrete_map = {'0': 'pink', '1': 'hotpink', '2':'royalblue', '3':'purple', '4':'mediumslateblue'},
+                hover_data=hover,
+                zoom=3.5,
+                center = {"lat": 37.0902, "lon": -95.7129},
+                opacity=0.8
+            )
+            fig.update_coloraxes(colorbar_dtick=n_clusters,
+                                  colorbar_tickvals=np.sort(df_h3_geom_95['cluster'].unique())),
+                                  #colorbar_ticktext=np.sort(df_h3_geom_95['cluster'].unique()))
+            fig.update_layout(height=900, coloraxis_colorbar=dict(title='Clusters'))
+
+            st.plotly_chart(fig, use_container_width=True, theme="streamlit")
 
 
 
