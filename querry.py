@@ -109,4 +109,3 @@ def read_analytics(year):
     df = pd.DataFrame(session.sql(query=query_final).collect())
     df.dropna(axis=0, inplace=True) # for 2019
     return df
-
