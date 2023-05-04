@@ -44,7 +44,7 @@ def h3_geomap_UI():
         with sel2:
             states = st.multiselect(
                 label="State",
-                options=['All'] + list(STATES.keys()),
+                options=['All'] + list(STATES.values()), # list(STATES.keys()),
                 default='All',
             )
         # split
@@ -115,8 +115,8 @@ def h3_geomap_UI():
             if 'All' in states:
                 cbg_states = querry.read_static(year, name="states", use_where=False)
             else:
-                states_codes = [code for _, code in STATES.items() if _ in states]
-                states_list = list_concat(states_codes)
+                # states_codes = [code for _, code in STATES.items() if _ in states]
+                states_list = list_concat(states)
                 cbg_states = querry.read_static(year, name="states", use_where=True, states_list=states_list)
 
             # creating the final field description dataframe - if no choices available for filter 2, then just use filter 1
@@ -193,11 +193,6 @@ def h3_geomap_UI():
                 st.plotly_chart(fig1, use_container_width=True, theme="streamlit")
 
                 count_filtered = geo_utils.quantile_filter(df_h3_geom, 'count')
-                # count_filtered = df_h3_geom.loc[
-                #     (df_h3_geom['count'] <= df_h3_geom[["count"]].quantile(0.95)[0]) &
-                #     (df_h3_geom['count'] > 0),
-                #     ['count']
-                # ]
 
                 with st.container():
                     st.write(
@@ -229,7 +224,6 @@ def h3_geomap_UI():
                         )
                         st.plotly_chart(hist2, use_container_width=True, theme='streamlit')
 
-
                 hist_df_1 = pd.concat(
                     [
                         pd.DataFrame(df_h3_geom['count']).describe().transpose(),
@@ -251,11 +245,6 @@ def h3_geomap_UI():
                 st.plotly_chart(fig2, use_container_width=True, theme="streamlit")
 
                 ind_mean_filtered = geo_utils.quantile_filter(df_h3_geom, 'index_mean')
-                # ind_mean_filtered = df_h3_geom.loc[
-                #     (df_h3_geom['index_mean'] <= df_h3_geom[['index_mean']].quantile(0.95)[0]) &
-                #     (df_h3_geom['index_mean'] > 0),
-                #     ['index_mean']
-                # ]
 
                 with st.container():
                     st.write(
@@ -306,11 +295,6 @@ def h3_geomap_UI():
                 st.plotly_chart(fig3, use_container_width=True, theme="streamlit")
 
                 ind_med_filtered = geo_utils.quantile_filter(df_h3_geom, 'index_median')
-                # ind_med_filtered = df_h3_geom.loc[
-                #     (df_h3_geom['index_median'] <= df_h3_geom[['index_median']].quantile(0.95)[0]) &
-                #     (df_h3_geom['index_median'] > 0),
-                #     ['index_median']
-                # ]
 
                 with st.container():
                     st.write('Explore hexagon index against median distribution for selected population at H' + str(h3_res) + ' level.')
@@ -344,6 +328,7 @@ def h3_geomap_UI():
                     [
                         pd.DataFrame(df_h3_geom['index_median']).describe().transpose(),
                         pd.DataFrame(ind_med_filtered.describe()).transpose()
-                    ])
+                    ]
+                )
                 hist_df_3.index = ['raw count', 'filtered count']
                 st.dataframe(hist_df_3, use_container_width=True)
