@@ -56,7 +56,7 @@ def home_UI():
             st.markdown('- Income (Household Income In The Past 12 Months in Inflation-Adjusted Dollars)')
         with vis:
             #st.markdown('#')
-            image1 = Image.open('images/data.png')
+            image1 = Image.open('images/data.PNG')
             image1 = image1.resize((430, 500))
             st.image(image1)
 
