@@ -27,11 +27,12 @@ def home_UI():
 
             st.markdown('- Sex By Age')
             st.markdown('- Race')
+            st.markdown('- Total Fields Of Bachelors Degrees Reported')
+            st.markdown('- Household Income In The Past 12 Months (Inflation-Adjusted Dollars)')
             st.markdown('- Travel Time To Work')
             st.markdown('- Households By Type')
-            st.markdown('- Total Fields Of Bachelors Degrees Reported')
             st.markdown('- Occupancy Status')
-            st.markdown('- Value (Housing Value and Purchase Price')
+            st.markdown('- Value (Housing Value and Purchase Price)')
             st.write('''
                      We also allow a user to filter the features further by filtering on 2 sub-dimentions. For example in Households By Type we allow to filter out not only by type
                      but also by living engagement such as Living alone. Not all features have second a second level filter.
