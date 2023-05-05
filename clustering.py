@@ -15,9 +15,13 @@ from CONSTANTS import YEAR, STATES, TABLE_INDEX, COLUMNS
 
 
 def clustering_UI():
-    st.title("Clustering page")
-    st.header("Select location, features of interest, number of clusters, desired H3 resolution and click 'Create clusters button'")
+    st.title("🎯 ML Geo Clustering")
+    st.header("Group hexagons based on demographic similarities")
     st.markdown('#')
+    st.write('''
+             Select location, features of interest, number of clusters, desired H3 resolution and click "Create clusters button".
+             Make sure to select at least 2 variables. Unselect "All" if you want to cluster hexagons from certain states only.
+             ''')
     with st.container():
         col1, col2, col3 = st.columns(3)
         with col1:

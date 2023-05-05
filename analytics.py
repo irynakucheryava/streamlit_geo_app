@@ -7,7 +7,14 @@ from CONSTANTS import YEAR, STATES, TABLE_DATA
 
 
 def analytics_UI():
-    st.title(' 👨‍👩‍👧‍👦 Demographic statistics for chosen year and state')
+    st.title(' 👨‍👩‍👧‍👦 Demographic Statistics')
+    st.header('''Create an interactive dashboard visualising US demographics''')
+    st.markdown('#')
+    st.write(
+        """
+        The dashboard contains a selection of plots showcasing default variables.
+        You can interact with plots by unlecting categories or by selecting areas of interest.
+        """)
     with st.container():
         col1, col2, col3 = st.columns(3)
         with col1:

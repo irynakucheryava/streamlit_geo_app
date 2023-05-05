@@ -16,16 +16,17 @@ H3_RESOLUTION = 6
 
 
 def h3_geomap_UI():
-    st.title('🌎 H3 geomap')
-    st.header('''Explore US Census data though H3 Geo lens by navigating through demographic filters.''')
+    st.title('🌎 H3 Geo Lens')
+    st.header('''Explore US Census data though H3 Geo lens by navigating through demographic filters''')
     st.markdown('#')
     st.write(
         """
-        By default we show a count of the whole population within each hexagon at H3 level 4 in 2020.
+        This part of the app generates a map with a count of selected population within each hexagon at desired H3 level.
         Use filters to see a geo representation of a different subset of the data.
         Please note that Filter 2 will be shown only if available.
         Select 'All' if you want all option for a given filter to be used.
         If you select 'All' in conjunction with another option(s), then all options will be used.
+        Make sure to unselect 'All' if you want only a certain state(s) to show.
         Once ready, click the "Show results" button to display H3 geo map.
         """)
     #st.markdown('#')
@@ -237,7 +238,7 @@ def h3_geomap_UI():
                 st.write(
                     '''This map shows an index - a count within each hexagon compared to the MEAN value across all hexagons for filtered population.
                     For example, a value of 200 means that compared to an average count, a given hexagon contains twice as many people,
-                    while a value of 50 means twice as less.
+                    while a value of 50 means half as many.
                     Note that index is calculated taken all selected states into account.
                     '''
                 )
@@ -285,10 +286,10 @@ def h3_geomap_UI():
                 hist_df_2.index = ['raw count', 'filtered count']
                 st.dataframe(hist_df_2, use_container_width=True)
             with tab3:
-                st.write('''This map shows an index - a count within each hexagon compared to the MEDIAN val across all hexagons for filtered population.
+                st.write('''This map shows an index - a count within each hexagon compared to the MEDIAN value across all hexagons for filtered population.
                          Median helps account for skewness in the data and a non-representative mean. Same rules as in the "Mean Index" tab apply:
                              a value of 200 means that compared to a median count, a given hexagon contains twice as many people,
-                             while a value of 50 means twice as less.
+                             while a value of 50 means half as many.
                              Note that index is calculated taken all selected states into account.
                          ''')
                 fig3 = geo_utils.plotly_h3(df_h3_geom, col='index_median', col_log='index_med_log')
