@@ -40,7 +40,7 @@ select
     "B15012e2" + "B15012e3" + "B15012e4" + "B15012e5" + "B15012e6" +
     "B15012e7" + "B15012e8" + "B15012e9" as "education_science and engineering",
     // income
-    "B19001e2" as "income_10000 $ or less",
+    "B19001e2" as "income_10 000 $ or less",
     "B19001e3" as "income_10 000-14 999 $",
     "B19001e4" as "income_15 000-19 999 $",
     "B19001e5" as "income_20 000-24 999 $",
