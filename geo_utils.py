@@ -1,7 +1,8 @@
 import h3pandas
-
 import numpy as np
 import pandas as pd
+import streamlit as st
+
 import plotly.express as px
 
 from CONSTANTS import TABLE_INDEX
@@ -107,20 +108,28 @@ def plotly_h3(df, col, col_log):
     return fig
 
 
-def plotly_hist_all(df, col,x_label, color, title, cumulative=False):
-    fig = px.histogram(df,
-                       x=col,
-                       color_discrete_sequence=[color],
-                       marginal="violin",
-                       nbins=150,
-                       cumulative=cumulative,
-                       opacity = 0.7,
-                       labels={
-                           col: x_label
-                           },
-                       title=title)
-    fig.update_traces(marker_line_width=1,marker_line_color="white")
-    fig.update_layout(height=600)
+def plotly_hist_all(df, col, x_label, color, title, cumulative=False):
+    fig = px.histogram(
+        df,
+        x=col,
+        color_discrete_sequence=[color],
+        marginal="violin",
+        nbins=150,
+        cumulative=cumulative,
+        opacity=0.7,
+        labels={
+            col: x_label
+            },
+    )
+    fig.update_traces(marker_line_width=1, marker_line_color="white")
+    fig.update_layout(
+        height=600,
+        title={
+            'text': title,
+            'x': 0.5,
+            'xanchor': 'center',
+        }
+    )
     return fig
 
 
@@ -133,7 +142,50 @@ def quantile_filter(df : pd.DataFrame, col : str, q=0.95):
     return df_filtered
 
 
+def h3_tab_plot(
+        df_h3_geom : pd.DataFrame, col : str, col_log : str,
+        distribution_title : str, hist_param_df : dict, hist_param_df_95 : dict
+    ):
+    fig1 = plotly_h3(
+        df=df_h3_geom,
+        col=col,
+        col_log=col_log
+    )
+    st.plotly_chart(fig1, use_container_width=True, theme="streamlit")
 
+    count_filtered = quantile_filter(df_h3_geom, col)
 
+    with st.container():
+        st.write(
+            distribution_title
+        )
+        col1, col2 = st.columns(2)
+        with col1:
+            hist1 = plotly_hist_all(
+                df=df_h3_geom,
+                col=col,
+                cumulative=False,
+                x_label=hist_param_df["x_label"],
+                color='gold',
+                title=hist_param_df["title"],
+            )
+            st.plotly_chart(hist1, use_container_width=True, theme='streamlit')
+        with col2:
+            hist2 = plotly_hist_all(
+                df=count_filtered,
+                col=col,
+                cumulative=False,
+                x_label=hist_param_df_95["x_label"],
+                color='gold',
+                title=hist_param_df_95["title"],
+            )
+            st.plotly_chart(hist2, use_container_width=True, theme='streamlit')
 
-
+    hist_df_1 = pd.concat(
+        [
+            pd.DataFrame(df_h3_geom['count']).describe().transpose(),
+            pd.DataFrame(count_filtered.describe()).transpose()
+        ]
+    )
+    hist_df_1.index = ['raw count', 'filtered count']
+    st.dataframe(hist_df_1, use_container_width=True)

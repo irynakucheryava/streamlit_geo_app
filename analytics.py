@@ -13,8 +13,9 @@ def analytics_UI():
     st.write(
         """
         The dashboard contains a selection of plots showcasing default variables.
-        You can interact with plots by unlecting categories or by selecting areas of interest.
+        You can interact with plots by unselecting categories or by selecting areas of interest.
         """)
+    # parameter selection
     with st.container():
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -31,9 +32,11 @@ def analytics_UI():
             )
         with col3:
             st.markdown('#')
-            button = st.button(label='Show analytics',
-                               help='Select year and click the button',
-                               use_container_width=True)
+            button = st.button(
+                label='Show analytics',
+                help='Select year and click the button',
+                use_container_width=True
+            )
     if button:
         st.markdown('#')
         st.markdown("""---""")
@@ -43,22 +46,26 @@ def analytics_UI():
 
         # importing data and field description
         data = querry.read_analytics(year)
+        # gender plot
         if state == 'All':
-
             # plotting population by state and gender
-            gender_state = data[['STATE', 'SEX_MALES', 'SEX_FEMALES']].groupby(
+            gender_state = data[['STATE', 'sex_males', 'sex_females']].groupby(
                 by='STATE').sum().reset_index().copy()
-            gender_state = pd.melt(gender_state,
-                                   id_vars = ['STATE'],
-                                   value_vars=['SEX_MALES', 'SEX_FEMALES'])
-            gender_state['variable'] = gender_state['variable'].str.replace('SEX_', '')
-            fig = px.bar(gender_state,
-                         x = 'STATE', y = 'value',
-                         color='variable',
-                         # color_discrete_map={'FEMALES': 'mediumpurple',
-                         #                     'MALES': 'indigo'})
-                         color_discrete_sequence=px.colors.sequential.Agsunset,
-                         height=600)
+            gender_state = pd.melt(
+                gender_state,
+                id_vars = ['STATE'],
+                value_vars=['sex_males', 'sex_females']
+            )
+            gender_state['variable'] = gender_state['variable'].str.replace('sex_', '')
+            fig = px.bar(
+                gender_state,
+                x='STATE', y='value',
+                color='variable',
+                # color_discrete_map={'FEMALES': 'mediumpurple',
+                #                     'MALES': 'indigo'})
+                color_discrete_sequence=px.colors.sequential.Agsunset,
+                height=600
+            )
             fig.update_layout(
                 title={
                     'text': 'Population by state and gender',
@@ -66,7 +73,8 @@ def analytics_UI():
                     'x':0.5,
                     'xanchor': 'center',
                     #'yanchor': 'top'
-                    })
+                }
+            )
             st.plotly_chart(fig, use_container_width=True, theme='streamlit')
         else:
             data = data.loc[data['STATE'] == state, :]
@@ -77,86 +85,92 @@ def analytics_UI():
             col3, col4, col5 = st.columns(3)
             with col3:
                 # gender
-                gender_df = data_count(data=data,
-                                       col='SEX',
-                                       col_name='Gender')
-
-                pie = px.pie(gender_df,
-                             values='Count',
-                             names='Gender',
-                             color='Gender',
-                             # color_discrete_map={'MALES': 'khaki',
-                             #                     'FEMALES': 'gold'},
-                             color_discrete_sequence=px.colors.sequential.Plasma)
-                pie.update_layout(legend_font_size=9,
-                                  legend=dict(
-                                      orientation="v",
-                                      itemwidth=50,
-                                      #yanchor="bottom",
-                                      #y=1.02,
-                                      xanchor="right",
-                                      x=0.9),
-                                  title={
-                                      'text': 'Population by gender',
-                                      #'y':0.9,
-                                      'x':0.5,
-                                      'xanchor': 'center',
-                                      #'yanchor': 'top'
-                                      })
+                gender_df = data_count(
+                    data=data,
+                    col='sex',
+                    col_name='Gender'
+                )
+                pie = px.pie(
+                    gender_df,
+                    values='Count',
+                    names='Gender',
+                    color='Gender',
+                    color_discrete_sequence=px.colors.sequential.Plasma
+                )
+                pie.update_layout(
+                    legend_font_size=9,
+                    legend=dict(
+                        orientation="v",
+                        itemwidth=50,
+                        xanchor="right",
+                        x=0.9,
+                    ),
+                    title={
+                        'text': 'Population by Gender',
+                        'x': 0.5,
+                        'xanchor': 'center',
+                    }
+                )
                 st.plotly_chart(pie, use_container_width=True, theme='streamlit')
             with col4:
                 # age
-                age_df = data_count(data=data,
-                                    col='AGE',
-                                    col_name='AGE')
-                pie1 = px.pie(age_df,
-                              values='Count',
-                              names='AGE',
-                              color='AGE',
-                              color_discrete_sequence=px.colors.sequential.Plasma)
-                pie1.update_layout(legend_font_size=9,
-                                   legend=dict(
-                                       orientation="v",
-                                       itemwidth=50,
-                                       #yanchor="bottom",
-                                       #y=1.02,
-                                       xanchor="right",
-                                       x=1),
-                                   title={
-                                       'text': 'Population by age',
-                                       #'y':0.9,
-                                       'x':0.5,
-                                       'xanchor': 'center',
-                                       #'yanchor': 'top'
-                                       })
+                age_df = data_count(
+                    data=data,
+                    col='age',
+                    col_name='Age'
+                )
+                pie1 = px.pie(
+                    age_df,
+                    values='Count',
+                    names='Age',
+                    color='Age',
+                    color_discrete_sequence=px.colors.sequential.Plasma
+                )
+                pie1.update_layout(
+                    legend_font_size=9,
+                    legend=dict(
+                        orientation="v",
+                        itemwidth=50,
+                        xanchor="right",
+                        x=1
+                    ),
+                    title={
+                        'text': 'Population by Age',
+                        'x': 0.5,
+                        'xanchor': 'center',
+                    }
+                )
                 st.plotly_chart(pie1, use_container_width=True, theme='streamlit')
 
             with col5:
                 # race
-                race_df = data_count(data=data,
-                                     col='RACE',
-                                     col_name='Race')
+                race_df = data_count(
+                    data=data,
+                    col='race',
+                    col_name='Race'
+                )
 
-                pie2 = px.pie(race_df,
-                              values='Count',
-                              names='Race',
-                              color='Race',
-                              color_discrete_sequence=px.colors.sequential.Plasma)
-                pie2.update_layout(legend_font_size=9,
-                                   legend=dict(
-                                       orientation="v",
-                                       itemwidth=50,
-                                       #yanchor="bottom",
-                                       #y=1.02,
-                                       xanchor="right",
-                                       x=1.1),
-                                   title={
-                                       'text': 'Population by race',
-                                       #'y':0.9,
-                                       'x':0.5,
-                                       'xanchor': 'center',
-                                       #'yanchor': 'top'
-                                       })
+                pie2 = px.pie(
+                    race_df,
+                    values='Count',
+                    names='Race',
+                    color='Race',
+                    color_discrete_sequence=px.colors.sequential.Plasma
+                )
+                pie2.update_layout(
+                    legend_font_size=9,
+                    legend=dict(
+                        orientation="v",
+                        itemwidth=50,
+                        xanchor="right",
+                        x=1.1
+                    ),
+                    title={
+                        'text': 'Population by Race',
+                        'x': 0.5,
+                        'xanchor': 'center',
+                    }
+                )
                 st.plotly_chart(pie2, use_container_width=True, theme='streamlit')
         st.markdown('#')
         st.markdown('#')
@@ -167,19 +181,24 @@ def analytics_UI():
         with st.container():
             col6, col7 = st.columns(2)
             with col6:
-                house_df = data_count(data=data,
-                                      col='HOUSEHOLD',
-                                      col_name='Type')
+                house_df = data_count(
+                    data=data,
+                    col='household',
+                    col_name='Type'
+                )
 
-                fig1 = px.bar(house_df,
-                              y='Type',
-                              x='Count',
-                              color='Type',
-                              color_discrete_map={'FEMALE_HOUSEHOLDER': 'mediumpurple',
-                                                  'MALE_HOUSEHOLDER': 'mediumslateblue',
-                                                  'MARRIED_COUPLE': 'indigo',
-                                                  'COHABITING_COUPLE': 'mediumorchid'},
-                              )
+                fig1 = px.bar(
+                    house_df,
+                        y='Type',
+                        x='Count',
+                        color='Type',
+                        color_discrete_map={
+                            'female householder': 'mediumpurple',
+                            'male householder': 'mediumslateblue',
+                            'married couple': 'indigo',
+                            'cohabiting couple': 'mediumorchid'
+                        },
+                    )
                 fig1.update_layout(
                     legend_font_size=9,
                     legend=dict(
@@ -188,64 +207,70 @@ def analytics_UI():
                         yanchor="bottom",
                         y=1.02,
                         xanchor="right",
-                        x=1.1),
+                        x=1.1
+                    ),
                     title={
-                        'text': 'Type of household',
-                        'y':0.9,
-                        'x':0.5,
+                        'text': 'Type of Household',
+                        'y': 0.9,
+                        'x': 0.5,
                         'xanchor': 'center',
-                        #'yanchor': 'top'
-                        })
+                    }
+                    )
                 fig1.update_yaxes(showticklabels=False)
                 st.plotly_chart(fig1, use_container_width=True, theme='streamlit')
 
             with col7:
-                occupancy_df = data_count(data=data,
-                                          col='OCCUPANCY',
-                                          col_name='Type')
+                occupancy_df = data_count(
+                    data=data,
+                    col='occupancy',
+                    col_name='Type'
+                )
 
-                pie3 = px.pie(occupancy_df,
-                              values='Count',
-                              names='Type',
-                              color='Type',
-                              color_discrete_sequence=px.colors.sequential.Agsunset)
-                pie3.update_layout(legend_font_size=9,
-                                   legend=dict(
-                                       orientation="v",
-                                       itemwidth=50,
-                                       #yanchor="bottom",
-                                       #y=1.02,
-                                       xanchor="right",
-                                       x=0.8),
-                                   title={
-                                       'text': 'Occupancy status of housing unit',
-                                       #'y':0.9,
-                                       'x':0.5,
-                                       'xanchor': 'center',
-                                       #'yanchor': 'top'
-                                       })
+                pie3 = px.pie(
+                    occupancy_df,
+                    values='Count',
+                    names='Type',
+                    color='Type',
+                    color_discrete_sequence=px.colors.sequential.Agsunset
+                )
+                pie3.update_layout(
+                    legend_font_size=9,
+                    legend=dict(
+                        orientation="v",
+                        itemwidth=50,
+                        xanchor="right",
+                        x=0.8
+                    ),
+                    title={
+                        'text': 'Occupancy Status of Housing Unit',
+                        'x': 0.5,
+                        'xanchor': 'center',
+                    }
+                )
                 st.plotly_chart(pie3, use_container_width=True, theme='streamlit')
 
             st.markdown('#')
-            value_df = data_count(data=data,
-                                  col='VALUE',
-                                  col_name='Type')
-            fig2 = px.bar(value_df,
-                          x='Type',
-                          y='Count',
-                          color='Type',
-                          color_discrete_sequence=px.colors.sequential.Agsunset,
-                          height=600,
-                          )
+            value_df = data_count(
+                data=data,
+                col='value',
+                col_name='Type'
+            )
+            fig2 = px.bar(
+                value_df,
+                x='Type',
+                y='Count',
+                color='Type',
+                color_discrete_sequence=px.colors.sequential.Agsunset,
+                height=600,
+            )
             fig2.update_layout(
                 title={
-                    'text': 'Housing value',
-                    #'y':0.9,
-                    'x':0.5,
+                    'text': 'Housing Value',
+                    'x': 0.5,
                     'xanchor': 'center',
-                    #'yanchor': 'top'
-                    },
-                xaxis_title=None)
+                },
+                xaxis_title=None
+            )
             st.plotly_chart(fig2, use_container_width=True, theme='streamlit')
 
         st.markdown('#')
@@ -257,78 +282,86 @@ def analytics_UI():
         with st.container():
             col9, col10, col11  = st.columns(3)
             with col9:
-                education_df = data_count(data=data,
-                                          col='EDUCATION',
-                                          col_name='Type')
+                education_df = data_count(
+                    data=data,
+                    col='education',
+                    col_name='Type'
+                )
 
-                fig3 = px.bar(education_df,
-                              x='Type',
-                              y='Count',
-                              color='Type',
-                              color_discrete_sequence=px.colors.sequential.Agsunset
-                              )
+                fig3 = px.bar(
+                    education_df,
+                    x='Type',
+                    y='Count',
+                    color='Type',
+                    color_discrete_sequence=px.colors.sequential.Agsunset
+                )
                 fig3.update_layout(
                     title={
-                        'text': 'Type of education',
-                        #'y':0.9,
-                        'x':0.5,
+                        'text': 'Type of Education',
+                        'x': 0.5,
                         'xanchor': 'center',
-                        #'yanchor': 'top'
                         },
                     legend_font_size=9,
-                    xaxis_title=None)
+                    xaxis_title=None
+                )
                 fig3.update_xaxes(showticklabels=False)
                 st.plotly_chart(fig3, use_container_width=True, theme='streamlit')
 
                 with col10:
-                    income_df = data_count(data=data,
-                                           col='INCOME',
-                                           col_name='Type')
+                    income_df = data_count(
+                        data=data,
+                        col='income',
+                        col_name='Type'
+                    )
 
-                    pie4 = px.pie(income_df,
-                                  values='Count',
-                                  names='Type',
-                                  color='Type',
-                                  color_discrete_sequence=px.colors.sequential.Agsunset)
-                    pie4.update_layout(legend_font_size=9,
-                                       legend=dict(
-                                           orientation="v",
-                                           itemwidth=50,
-                                           #yanchor="bottom",
-                                           #y=1.02,
-                                           xanchor="right",
-                                           x=1),
-                                       title={
-                                           'text': 'Income',
-                                           #'y':0.9,
-                                           'x':0.5,
-                                           'xanchor': 'center',
-                                           #'yanchor': 'top'
-                                           })
+                    pie4 = px.pie(
+                        income_df,
+                        values='Count',
+                        names='Type',
+                        color='Type',
+                        color_discrete_sequence=px.colors.sequential.Agsunset
+                    )
+                    pie4.update_layout(
+                        legend_font_size=9,
+                        legend=dict(
+                            orientation="v",
+                            itemwidth=50,
+                            xanchor="right",
+                            x=1
+                        ),
+                        title={
+                            'text': 'Household Income',
+                            'x': 0.5,
+                            'xanchor': 'center',
+                        }
+                    )
                     st.plotly_chart(pie4, use_container_width=True, theme='streamlit')
                 with col11:
-                    travel_df = data_count(data=data,
-                                           col='TIME',
-                                           col_name='Time')
-                    pie5 = px.pie(travel_df,
-                                  values='Count',
-                                  names='Time',
-                                  color='Time',
-                                  color_discrete_sequence=px.colors.sequential.Plasma)
-                    pie5.update_layout(legend_font_size=9,
-                                       legend=dict(
-                                           orientation="v",
-                                           itemwidth=50,
-                                           #yanchor="bottom",
-                                           #y=1.02,
-                                           xanchor="right",
-                                           x=1.1),
-                                       title={
-                                           'text': 'Travel time to work',
-                                           #'y':0.9,
-                                           'x':0.5,
-                                           'xanchor': 'center',
-                                           #'yanchor': 'top'
-                                           })
+                    travel_df = data_count(
+                        data=data,
+                        col='time_to_work',
+                        col_name='Time'
+                    )
+                    pie5 = px.pie(
+                        travel_df,
+                        values='Count',
+                        names='Time',
+                        color='Time',
+                        color_discrete_sequence=px.colors.sequential.Plasma
+                    )
+                    pie5.update_layout(
+                        legend_font_size=9,
+                        legend=dict(
+                            orientation="v",
+                            itemwidth=50,
+                            xanchor="right",
+                            x=1.1
+                        ),
+                        title={
+                            'text': 'Travel Time to Work',
+                            'x': 0.5,
+                            'xanchor': 'center',
+                        }
+                    )
                     st.plotly_chart(pie5, use_container_width=True, theme='streamlit')
 

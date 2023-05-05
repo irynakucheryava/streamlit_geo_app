@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
+
 from snowflake.snowpark.session import Session
+
 from CONSTANTS import TABLE_INDEX, FIELD_PREFIXES
 from utils import list_concat
 
